@@ -14,4 +14,5 @@ class GatedFusion(nn.Module):
         gate = torch.sigmoid(self.fc(concat))
 
         fused = gate*img_feat + (1-gate)*text_feat
+        fused =  nn.functional.normalize(fused, dim=1)
         return fused
