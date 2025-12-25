@@ -22,10 +22,12 @@ class TextEncoder(nn.Module):
         )
 
         # cls extraction
-        cls_embedding = output.last_hidden_state[:,0,:] #[B,768]
+        # cls_embedding = output.last_hidden_state[:,0,:] #[B,768]
 
-        cls_embedding = self.fc(cls_embedding) #[B,512]
+        # cls_embedding = self.fc(cls_embedding) #[B,512]
 
-        return cls_embedding
+        # return cls_embedding
+        sequence = output.last_hidden_state
+        sequence = self.fc(sequence) #[B,16,512]
 
-
+        return sequence

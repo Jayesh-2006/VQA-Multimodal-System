@@ -11,7 +11,9 @@ class VQAModel(nn.Module):
         self.image_encoder = ImageEncoder()  #[B,49,2048]
         self.text_encoder = TextEncoder() #[B,512]
 
-        self.attention = Attention(img_dim=2048,text_dim=512,hidden_dim=512) #[B,2048]
+        self.img_attn = Attention(query_dim=512,context_dim=2048,embed_dim=512)
+        self.text_attn = Attention(query_dim=2048,context_dim=512,embed_dim=512)
+
         self.img_projection = nn.Linear(2048,512) #[B,512]
         self.fusion = GatedFusion(dim = 512) #[B,512]
 
@@ -24,13 +26,16 @@ class VQAModel(nn.Module):
 
     def forward(self,images, input_ids, attention_mask):
         img_features_grid = self.image_encoder(images)  #[B,49,2048]
-        text_features = self.text_encoder(input_ids = input_ids, attention_mask = attention_mask) #[B,512]
+        text_features = self.text_encoder(input_ids = input_ids, attention_mask = attention_mask) #[B,16,512]
+        cls_embeddings = text_features[:,0,:]  #[B,512]
 
-        img_features = self.attention(img_features_grid,text_features)  #[B,2048]
-        img_features = self.img_projection(img_features)  #[B,512]
+        img_attention = self.img_attn(context=img_features_grid, query=cls_embeddings) #[B,2048]
+        text_attention = self.text_attn(context = text_features[:,1:,:], query =img_attention)
 
-        fused = self.fusion(img_features,text_features)  #[B,512]
-        
+        img_attention = self.img_projection(img_attention)  #[B,512]
+
+        fused = self.fusion(img_attention,text_attention)  #[B,512]
+
         logits = self.classifier(fused)
 
         return logits

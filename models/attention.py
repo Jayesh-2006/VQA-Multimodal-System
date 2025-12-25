@@ -3,32 +3,41 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class Attention(nn.Module):
-    def __init__(self,img_dim,text_dim,hidden_dim):
+    def __init__(self,query_dim,context_dim,embed_dim):
         super().__init__()
 
         # projection for same scale
-        self.img_proj = nn.Linear(img_dim, hidden_dim) # [B,2048]-->[B,512]
-        self.text_proj = nn.Linear(text_dim, hidden_dim) # [B,512]-->[B,512]
-
+        self.query_proj = nn.Linear(query_dim, embed_dim) 
+        self.context_proj = nn.Linear(context_dim, embed_dim) 
+        
+        self.dropout = nn.Dropout(0.1)
         # scoring layer
-        self.full_proj = nn.Linear(hidden_dim,1)
+        self.output_proj = nn.Linear(embed_dim,1)
 
-    def forward(self,img_features,text_features):
-        # img_features: [B,49,2048]
-        # text_features: [B,512]
+    def forward(self,context,query):
+        # query -->context
+        # query [B,query_dim] , context [B,N,context_dim] N = 49 for image as context, N=16 for text as context
+        # text--->image                                    
+        # context: [B,49,2048]
+        # query: [B,512]
 
-         # [B,512] --> [B,49,512] 
-        text_features = text_features.unsqueeze(1) # [B,1,512]
-        text_features = text_features.expand(-1,img_features.size(1),-1) # [B,49,512]
+        #image-->text
+        # context: [B,16,512]
+        # query: [B,2048]
 
-        img_proj = self.img_proj(img_features) # [B,49,512]
-        text_features = self.text_proj(text_features) # [B,49,512]
+        # [B,query_dim] --> [B,1,query_dim]
+        query= query.unsqueeze(1) # [B,1,query_dim]
+        
 
-        combined_features = torch.tanh(img_proj + text_features) # [B,49,512]
+        query_proj = self.query_proj(query) #  [B,N,query_dim]-->[B,1,embed_dim]
+        context_proj = self.context_proj(context) # [B,N,context_dim]-->[B,N,embed_dim]
 
-        attention = self.full_proj(combined_features) # [B,49,1]
+        combined_features = self.dropout(torch.tanh(query_proj + context_proj)) # [B,1,embed_dim]+[B,N,embed_dim]=[B,N,embed_dim]
 
-        alpha = F.softmax(attention, dim=1) # [B,49,1] # probabilities
+        attention = self.output_proj(combined_features) # [B,N,1]
 
-        img_att = (img_features * alpha).sum(dim=1) # [B,2048] weighted sum  || [B,49,2048]*[B,49,1] --> [B,49,2048] --> sum dim1 --> [B,2048]
-        return img_att
+        alpha = F.softmax(attention, dim=1) # [B,N,1] # probabilities
+
+        context_att = (context * alpha).sum(dim=1) # [B,context_dim] weighted sum  || [B,N,c_dim]*[B,N,1] --> [B,49,c_dim] --> sum dim1 --> [B,c_dim]
+        return context_att
+    
