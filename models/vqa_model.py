@@ -14,7 +14,16 @@ class VQAModel(nn.Module):
         self.img_attn = Attention(query_dim=512,context_dim=2048,embed_dim=512)
         self.text_attn = Attention(query_dim=2048,context_dim=512,embed_dim=512)
 
-        self.img_projection = nn.Linear(2048,512) #[B,512]
+        self.img_projection = nn.Sequential(
+            nn.Linear(8 * 2048, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 512)
+        )
+        self.text_projection = nn.Sequential(
+            nn.Linear(8 * 512, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 512)
+        )
         self.fusion = GatedFusion(dim = 512) #[B,512]
 
         self.classifier = nn.Sequential(
@@ -29,10 +38,14 @@ class VQAModel(nn.Module):
         text_features = self.text_encoder(input_ids = input_ids, attention_mask = attention_mask) #[B,16,512]
         cls_embeddings = text_features[:,0,:]  #[B,512]
 
-        img_attention = self.img_attn(context=img_features_grid, query=cls_embeddings) #[B,2048]
-        text_attention = self.text_attn(context = text_features[:,1:,:], query =img_attention)
+        img_attention_raw = self.img_attn(context=img_features_grid, query=cls_embeddings) #[B,2048*8]
+        img_attention = self.img_projection(img_attention_raw) #[B,512]
 
-        img_attention = self.img_projection(img_attention)  #[B,512]
+
+        text_query = img_attention_raw[:, :2048]
+        text_attention_raw = self.text_attn(context = text_features[:,1:,:], query =text_query) #[B,8*512]
+        text_attention = self.text_projection(text_attention_raw) #[B,512]
+
 
         fused = self.fusion(img_attention,text_attention)  #[B,512]
 
