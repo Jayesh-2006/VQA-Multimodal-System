@@ -9,26 +9,30 @@ By fusing **ResNet50** (vision) and **BERT** (language) through an 8-head attent
 
 ## 📍 Table of Contents
 
-- [Project Overview](#project-overview)
-- [Video Demo](#video-demo)
-- [Objective](#objective)
-- [Architecture Overview](#architecture-overview)
-- [Project Chronicle (Approach)](#Project-Chronicle:-8-Glimpse-VQA-System)
-- [Results & Metrics](#results--metrics)
-- [Real-World Applications](#real-world-applications)
-- [Key Learning Outcomes](#key-learning-outcomes)
+- [Project Overview](#-project-overview)
+- [Video Demo](#-video-demo)
+- [Objective](#-objective)
+- [Architecture Overview](#%EF%B8%8F-architecture-overview)
+- [Project Chronicle (Approach)](#-project-chronicle-8-glimpse-vqa-system)
+- [Results & Metrics](#-results--metrics)
+- [Real-World Applications](#-real-world-applications)
+- [Key Learning Outcomes](#-key-learning-outcomes)
 - [Project Structure](#-project-structure)
-- [Getting Started](#getting-started)
-- [References](#references)
+- [Getting Started](#-getting-started)
+- [Usage](#-usage)
+- [Technical Details](#-technical-details)
+- [References](#-references)
 
 ---
 
 
 ## 🎥 Video Demo
 
-<video src="assets/final demo.mp4" poster="assets/thumbnail.png" controls="controls" style="max-width: 100%;">
-  Your browser does not support the video tag.
-</video>
+
+https://github.com/user-attachments/assets/a97b96e3-d94f-4359-a43e-0c6482aff818
+
+
+
 
 ---
 
@@ -214,5 +218,6 @@ streamlit run app.py
 
 ## 📄 License
 This project is licensed under the MIT License.
+
 
 ---
