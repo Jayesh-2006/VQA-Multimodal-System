@@ -104,7 +104,7 @@ def main():
         persistent_workers=True
     )
 
-
+    #check
     print("Validation samples:", len(val_dataset))
     print("Validation batches:", len(val_loader))
 
@@ -129,63 +129,14 @@ def main():
 
     last_ckpt = os.path.join(PROJECT_ROOT,"checkpoints/best_model.pth")
 
-    ## ---------------- old loading config  -----------------
-
-    # if(os.path.exists(last_ckpt)):
-    #     checkpoint = torch.load(last_ckpt,map_location=device,weights_only=True)
-
-    #     ckpt_state = checkpoint["model_state_dict"]
-    #     model_state = model.state_dict()
-
-    #     same_classifier = ( ckpt_state["classifier.3.weight"].shape == model_state["classifier.3.weight"].shape )
-
-    #     if same_classifier:
-    #         print("Loading entire model from checkpoint")
-    #         model.load_state_dict(checkpoint["model_state_dict"])
-    #         # optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    #         best_val_loss = checkpoint["val_loss"]
-    #         # start_epoch = checkpoint["epoch"]
-    #         best_soft_acc = checkpoint.get("soft_acc", 0.0)
-
-    #         print(f"Resuming training from epoch {start_epoch}")
-    #     else:
-    #         filtered_ckpt = { k: v for k, v in ckpt_state.items() if k in model_state and not k.startswith("classifier.3")}
-
-    #         model_state.update(filtered_ckpt)
-    #         model.load_state_dict(model_state)
-
-    #         # reset optimizer & training state
-    #         best_val_loss = float("inf")
-    #         start_epoch = 0
-
-    #         print("Loaded backbone weights, classifier reinitialized (TOP-K change)")
-        
-    # else:
-    #     print("Starting training from scratch")
-
-
-    ## ---------------- new loading config  -----------------
+    ## ---------------- loading config  -----------------
     if os.path.exists(last_ckpt):
         print("Found checkpoint")
         checkpoint = torch.load(last_ckpt,map_location=device,weights_only=True)
-        old_state = checkpoint["model_state_dict"]
-        new_state = model.state_dict()
-
-        pretrained_dict = {}
-
-        for k,v in old_state.items():
-
-            if k in new_state and v.shape == new_state[k].shape:
-                pretrained_dict[k] = v
-
-            elif k == "image_encoder.fc.weight" and "img_projection.weight" in new_state:
-                pretrained_dict["img_projection.weight"] = v
-            elif k == "image_encoder.fc.bias" and "img_projection.bias" in new_state:
-                pretrained_dict["img_projection.bias"] = v
-            else :
-                pass
         
-        model.load_state_dict(pretrained_dict,strict = False)
+        model.load_state_dict(checkpoint["model_state_dict"],strict = False)
+        best_soft_acc = checkpoint.get("soft_acc", 0.0)
+        start_epoch = checkpoint.get("epoch", 0)
         best_soft_acc = checkpoint.get("soft_acc", 0.0)
         print(f"Model Loaded Successfully")
     else:
