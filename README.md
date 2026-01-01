@@ -29,7 +29,8 @@ By fusing **ResNet50** (vision) and **BERT** (language) through an 8-head attent
 ## 🎥 Video Demo
 
 
-https://github.com/user-attachments/assets/a97b96e3-d94f-4359-a43e-0c6482aff818
+<video src="https://github.com/user-attachments/assets/a97b96e3-d94f-4359-a43e-0c6482aff818" poster="assets/thumbnail.png" controls style="max-width: 100%;">
+</video>
 
 
 
@@ -221,3 +222,4 @@ This project is licensed under the MIT License.
 
 
 ---
+
