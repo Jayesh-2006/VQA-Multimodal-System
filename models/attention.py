@@ -2,43 +2,76 @@ import torch
 import torch.nn as nn
 
 
-class Attention(nn.Module):
-    def __init__(self,query_dim,context_dim,embed_dim):
+class CrossAttention(nn.Module):
+    def __init__(self,hidden_dim = 768, num_heads = 8):
         super().__init__()
 
-        # projection for same scale
-        self.query_proj = nn.Linear(query_dim, embed_dim) 
-        self.context_proj = nn.Linear(context_dim, embed_dim) 
         
-        self.dropout = nn.Dropout(0.1)
-        # scoring layer
-        self.output_proj = nn.Linear(embed_dim,8)
+        # Attn layers
+        self.text_to_image = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            batch_first=True,
+            dropout=0.1
+        )
 
-    def forward(self,context,query):
-        # query -->context
-        # query [B,query_dim] , context [B,N,context_dim] N = 49 for image as context, N=16 for text as context
-        # text--->image                                    
-        # context: [B,49,2048]
-        # query: [B,512]
+        self.image_to_text = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            batch_first=True,
+            dropout=0.1
+        )
 
-        #image-->text
-        # context: [B,16,512]
-        # query: [B,2048]
+        # Attn norms
+        self.text_norm1= nn.LayerNorm(hidden_dim)
+        self.image_norm1 = nn.LayerNorm(hidden_dim)
 
-        # [B,query_dim] --> [B,1,query_dim]
-        query= query.unsqueeze(1) # [B,1,query_dim]
+        # Text FFN
+        self.text_ffn = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * 4),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim * 4, hidden_dim)
+        )
+
+        # Image FFN
+        self.image_ffn = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim * 4),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim * 4, hidden_dim)
+        )
+
+        # FFN Norms
+        self.text_norm2 = nn.LayerNorm(hidden_dim)
+        self.image_norm2 = nn.LayerNorm(hidden_dim)
+
+
+    def forward(self,image_features, text_features,attention_mask):
         
+        text_padding_mask = ~attention_mask.bool()
 
-        query_proj = self.query_proj(query) #  [B,N,query_dim]-->[B,1,embed_dim]
-        context_proj = self.context_proj(context) # [B,N,context_dim]-->[B,N,embed_dim]
+        # Text -> Image
+        t2i, _ = self.text_to_image(
+            query=text_features,
+            key=image_features,
+            value=image_features
+        )
+        t2i = self.text_norm1(t2i + text_features)
+        t2i = self.text_ffn(t2i) + t2i
+        t2i = self.text_norm2(t2i)
 
-        combined_features = self.dropout(torch.tanh(query_proj + context_proj)) # [B,1,embed_dim]+[B,N,embed_dim]=[B,N,embed_dim]
 
-        attention = self.output_proj(combined_features) # [B,N,8]
+        # Image -> Text
+        i2t, _ = self.image_to_text(
+            query=image_features,
+            key=text_features,
+            value=text_features,
+            key_padding_mask=text_padding_mask
+        )
+        i2t = self.image_norm1(i2t + image_features)
+        i2t = self.image_ffn(i2t) + i2t
+        i2t = self.image_norm2(i2t)
 
-        weights = torch.softmax(attention,dim=1)  #[B,N,8]
-        glimpses = torch.matmul(weights.transpose(1, 2), context)  #[B,8,N]*[B,N,context_dim] = [B,8,2048]
+        return t2i, i2t  #t2i = [B,24,768]  #i2t = [B,36,768]
 
-        # context_att = (context * alpha).sum(dim=1) # [B,context_dim] weighted sum  || [B,N,c_dim]*[B,N,1] --> [B,49,c_dim] --> sum dim1 --> [B,c_dim]
-        return glimpses.reshape(context.size(0), -1)  # [B,2048*8]
-    

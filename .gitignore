@@ -9,4 +9,4 @@ __pycache__/
 *.zip
 *.pth
 /audit_results
-au.py
+demo_images

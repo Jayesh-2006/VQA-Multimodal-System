@@ -4,14 +4,14 @@ import torch
 import streamlit as st
 from PIL import Image
 from torchvision import transforms
-from transformers import BertTokenizer
+from transformers import DebertaV2Tokenizer
 
 from models.vqa_model import VQAModel
 
 # ---------------- CONFIG ---------------- #
 
 DEMO_IMAGE_DIR = "demo_images"
-MODEL_PATH = "checkpoints/model_only.pth"
+MODEL_PATH = "checkpoints/best_model_latest.pth"
 VOCAB_PATH = "data/idx2ans_topK.json"
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,18 +35,18 @@ def load_resources():
     with open(VOCAB_PATH, "r") as f:
         idx2ans = json.load(f)
 
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    tokenizer = DebertaV2Tokenizer.from_pretrained("microsoft/deberta-v3-base")
 
     model = VQAModel(num_answers=len(idx2ans))
     state_dict = torch.load(MODEL_PATH, map_location=device, weights_only=True)
-    model.load_state_dict(state_dict)
+    model.load_state_dict(state_dict["model_state_dict"])
     model.to(device)
     model.eval()
 
     return model, tokenizer, idx2ans
 
 
-@st.cache_data
+
 def load_demo_images():
     if not os.path.exists(DEMO_IMAGE_DIR):
         return []
@@ -61,8 +61,7 @@ model, tokenizer, idx2ans = load_resources()
 # ---------------- PREPROCESSING ---------------- #
 
 transform = transforms.Compose([
-    # transforms.Resize(256),
-    transforms.Resize((224, 224)),
+    transforms.Resize((192, 192)),
     transforms.ToTensor(),
     transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -155,7 +154,7 @@ with col3:
 
     if st.button("Get Answer", width="stretch") and image_for_model and question.strip():
 
-        img_tensor = transform(image_for_model).unsqueeze(0).to(device)
+        img_tensor = transform(image_for_model).unsqueeze(0).to(device) # type: ignore
         inputs = tokenizer(
             question,
             padding="max_length",

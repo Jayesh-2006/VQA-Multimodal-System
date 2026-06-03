@@ -68,7 +68,7 @@ class VQADataset(Dataset):
             question,
             padding="max_length",
             truncation=True,
-            max_length=16,
+            max_length=24,
             return_tensors="pt"
         )
 
@@ -95,18 +95,14 @@ class VQADataset(Dataset):
 from torch.utils.data.dataloader import default_collate
 
 def vqa_collate_fn(batch):
-    
-    #  Unzip the batch: [(img1, txt1, ...), (img2, txt2, ...)] -> [(img1, img2), (txt1, txt2), ...]
-    # batch is a list of tuples. zip(*batch) separates them by columns.
-    transposed = list(zip(*batch))
 
-    #  Use default_collate for all but the last element (answers)
-    images = default_collate(transposed[0])
-    text = default_collate(transposed[1])
-    soft_target = default_collate(transposed[2])
-    labels = default_collate(transposed[3])
-    
-    #keep it as a list of lists
-    answers = list(transposed[4]) 
+    images, text, soft_target, labels, answers = zip(*batch)
+
+    images = default_collate(list(images))
+    text = default_collate(list(text))
+    soft_target = default_collate(list(soft_target))
+    labels = default_collate(list(labels))
+
+    answers = list(answers)
 
     return images, text, soft_target, labels, answers

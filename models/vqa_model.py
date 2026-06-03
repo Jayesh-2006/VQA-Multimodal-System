@@ -1,54 +1,66 @@
+import torch
+
 from models.image_encoder import ImageEncoder
 from models.text_encoder import TextEncoder
-from models.gate_fusion import GatedFusion
-from models.attention import Attention
+from models.fusion import FusionEncoder
+from models.attention import CrossAttention
 from torch import nn
 
 class VQAModel(nn.Module):
     def __init__(self,num_answers):
         super().__init__()
 
-        self.image_encoder = ImageEncoder()  #[B,49,2048]
-        self.text_encoder = TextEncoder() #[B,512]
+        self.image_encoder = ImageEncoder()  ##[B,36,1024]
+        self.text_encoder = TextEncoder() #[B,24, 768]
 
-        self.img_attn = Attention(query_dim=512,context_dim=2048,embed_dim=512)
-        self.text_attn = Attention(query_dim=2048,context_dim=512,embed_dim=512)
+        
 
-        self.img_projection = nn.Sequential(
-            nn.Linear(8 * 2048, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 512)
+        self.cross_attn_layers = nn.ModuleList([
+            CrossAttention(hidden_dim=768, num_heads=8),
+            CrossAttention(hidden_dim=768, num_heads=8),
+            CrossAttention(hidden_dim=768, num_heads=8)
+        ])
+
+        self.image_proj = nn.Sequential(
+            nn.Linear(1024, 768),
+            nn.LayerNorm(768),
         )
-        self.text_projection = nn.Sequential(
-            nn.Linear(8 * 512, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 512)
-        )
-        self.fusion = GatedFusion(dim = 512) #[B,512]
+
+        self.fusion_encoder = FusionEncoder(hidden_dim=768, num_heads=12, num_layers=4)
 
         self.classifier = nn.Sequential(
-            nn.Linear(512,512),
-            nn.ReLU(),
-            nn.Dropout(p=0.2),
-            nn.Linear(512,num_answers)
+            nn.LayerNorm(768),
+            nn.Linear(768, 1024),
+            nn.GELU(),
+            nn.Dropout(0.2),
+            nn.Linear(1024, num_answers)
         )
 
+        self.query_pool = nn.Linear(768, 1)
+        
+
     def forward(self,images, input_ids, attention_mask):
-        img_features_grid = self.image_encoder(images)  #[B,49,2048]
-        text_features = self.text_encoder(input_ids = input_ids, attention_mask = attention_mask) #[B,16,512]
-        cls_embeddings = text_features[:,0,:]  #[B,512]
+        img_features = self.image_encoder(images)  #[B,36,1024]
+        text_features = self.text_encoder(input_ids, attention_mask) #[B,24,768]
+    
+        img_features = self.image_proj(img_features)
 
-        img_attention_raw = self.img_attn(context=img_features_grid, query=cls_embeddings) #[B,2048*8]
-        img_attention = self.img_projection(img_attention_raw) #[B,512]
+        #t2i = [B,24,768]  #i2t = [B,36,768]
 
-
-        text_query = img_attention_raw[:, :2048]
-        text_attention_raw = self.text_attn(context = text_features[:,1:,:], query =text_query) #[B,8*512]
-        text_attention = self.text_projection(text_attention_raw) #[B,512]
+        for cross_attn in self.cross_attn_layers:
+            text_features, img_features = cross_attn(img_features, text_features, attention_mask)
 
 
-        fused = self.fusion(img_attention,text_attention)  #[B,512]
 
-        logits = self.classifier(fused)
+        fused_output = self.fusion_encoder(img_features, text_features,attention_mask)  #[B, 68, 768]
+
+        query_tokens = fused_output[:, :8, :]  #[B, 8, 768]
+        scores = self.query_pool(query_tokens)  #[B, 8,1]
+        weights = torch.softmax(scores, dim=1)  #[B, 8,1]
+
+        query_tokens = (query_tokens * weights).sum(dim=1)  #[B, 768]
+
+
+        logits = self.classifier(query_tokens)  #[B, num_answers]
 
         return logits

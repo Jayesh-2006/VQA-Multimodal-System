@@ -65,6 +65,7 @@ def main():
     )
     if USE_SUBSET:
         dataset = Subset(dataset, list(range(SUBSET_SIZE)))
+        
     #data loader
     train_loader = DataLoader(
         dataset=dataset,
@@ -119,7 +120,7 @@ def main():
     #optimizer
     optimizer = torch.optim.Adam(
         params=filter(lambda p: p.requires_grad, model.parameters()), #filter(fun , iterable)
-        lr = 1e-5
+        lr = 1e-4
     )
     best_val_loss = float("inf")
     best_soft_acc = 0.0
@@ -130,17 +131,17 @@ def main():
     last_ckpt = os.path.join(PROJECT_ROOT,"checkpoints/best_model.pth")
 
     ## ---------------- loading config  -----------------
-    if os.path.exists(last_ckpt):
-        print("Found checkpoint")
-        checkpoint = torch.load(last_ckpt,map_location=device,weights_only=True)
+    # if os.path.exists(last_ckpt):
+    #     print("Found checkpoint")
+    #     checkpoint = torch.load(last_ckpt,map_location=device,weights_only=True)
         
-        model.load_state_dict(checkpoint["model_state_dict"],strict = False)
-        best_soft_acc = checkpoint.get("soft_acc", 0.0)
-        start_epoch = checkpoint.get("epoch", 0)
-        best_soft_acc = checkpoint.get("soft_acc", 0.0)
-        print(f"Model Loaded Successfully")
-    else:
-        print("Starting Training from scratch")
+    #     model.load_state_dict(checkpoint["model_state_dict"],strict = False)
+    #     best_soft_acc = checkpoint.get("soft_acc", 0.0)
+    #     start_epoch = checkpoint.get("epoch", 0)
+    #     best_soft_acc = checkpoint.get("soft_acc", 0.0)
+    #     print(f"Model Loaded Successfully")
+    # else:
+    #     print("Starting Training from scratch")
 
 
     epochs = 5
@@ -156,7 +157,7 @@ def main():
             labels = labels.to(device)
             soft_target = soft_target.to(device)
 
-            # extract inp ids ans attention mask from text, [B,1,32], squeeze for [B,32]
+            
             input_id = text["input_ids"].squeeze(1).to(device)
             attention_mask = text["attention_mask"].squeeze(1).to(device)
 
