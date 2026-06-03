@@ -465,19 +465,3 @@ This project provided practical experience in:
 This project is licensed under the MIT License.
 
 ---
-
-## 👨‍💻 Author
-
-**Jayesh Waghmare**
-
-B.Tech Computer Science (2024–2028)
-
-Passionate about:
-
-* Artificial Intelligence
-* Deep Learning
-* Multimodal Systems
-* Generative AI
-* Large Language Models
-
-GitHub: https://github.com/Jayesh-2006
