@@ -6,6 +6,9 @@ Visual Question Answering (VQA) is a challenging multimodal AI task where a mode
 
 This project implements a modern Transformer-based VQA architecture that combines powerful pretrained vision and language models with deep cross-modal reasoning. Instead of relying on simple feature concatenation, the model performs multiple rounds of interaction between visual and textual representations before making a prediction.
 
+### Live Demo
+👉 Hugging Face Space: [https://huggingface.co/spaces/...](https://huggingface.co/spaces/Jayeshw2006/VQA)
+
 The architecture integrates:
 
 * **SwinV2 Base** for visual understanding
