@@ -8,6 +8,7 @@ This project implements a modern Transformer-based VQA architecture that combine
 
 ### Live Demo
 👉 Hugging Face Space: [https://huggingface.co/spaces/...](https://huggingface.co/spaces/Jayeshw2006/VQA)
+![Demo](assets/demo.jpg)
 
 The architecture integrates:
 
@@ -56,6 +57,14 @@ Build a deep multimodal reasoning system capable of:
 
 ![Architecture](assets/architecture.png)
 
+## Model Configuration
+
+- SwinV2 Base Visual Encoder
+- DeBERTa-v3 Base Text Encoder
+- 3 Bidirectional Cross-Attention Blocks
+- 4-Layer Transformer Fusion Encoder
+- 8 Learnable Query Tokens
+- Answer Vocabulary Size: 2001
 The model consists of five major stages:
 
 ## 1️⃣ Visual Encoder
@@ -259,9 +268,30 @@ which is passed through a classifier to predict the final answer.
 
 | Metric              | Score |
 | ------------------- | ----- |
-| Strict Accuracy     | 52%   |
-| Soft Accuracy       | 63%   |
+| Strict Accuracy     | 52.3%   |
+| Soft Accuracy       | 63.7%   |
 
+
+---
+
+# 🧪 Experiments & Findings
+
+Several experiments were conducted to better understand which components contributed most to performance.
+
+| Experiment                       | Observation                                                                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| Frozen DeBERTa                   | Strong baseline performance                                                                  |
+| Unfreezing DeBERTa Layers 10-11  | Moderate improvement                                                                         |
+| Unfreezing DeBERTa Layers 8-11   | Best performance among tested configurations                                                 |
+| Increasing Fusion Depth          | Limited improvement                                                                          |
+| Increasing Cross-Attention Depth | Training became significantly harder and did not consistently improve validation performance |
+
+### Key Takeaways
+
+* Better feature representations contributed more to performance gains than simply increasing model depth.
+* Fine-tuning higher DeBERTa layers improved multimodal reasoning capabilities.
+* Architectural complexity alone did not guarantee better results.
+* Careful experimentation and ablation studies were critical for identifying effective design choices.
 
 ---
 
@@ -356,6 +386,24 @@ Train the model:
 python train.py
 ```
 
+# ⚡ Training Optimization
+
+Training large multimodal models can be computationally expensive. To accelerate experimentation, image features extracted from the frozen SwinV2 backbone were precomputed and cached.
+
+### Impact
+
+| Setup                         | Approx. Epoch Time |
+| ----------------------------- | -----------------: |
+| End-to-End Feature Extraction |         ~3.7 Hours |
+| Cached SwinV2 Features        |        ~34 Minutes |
+
+This optimization reduced training time by more than 6×, enabling faster experimentation with architecture variants, hyperparameters, and fine-tuning strategies while maintaining model performance.
+
+### Engineering Insight
+
+A major lesson from this project was that identifying and optimizing bottlenecks can often provide greater practical benefits than increasing model complexity. Profiling the training pipeline and eliminating redundant computation significantly improved development speed and research productivity.
+
+
 Training includes:
 
 * SwinV2 feature extraction
@@ -406,15 +454,10 @@ Blue
 
 Planned enhancements:
 
-* SwinV2 fine-tuning
-* DeBERTa fine-tuning
-* More Cross-Attention layers
-* Better answer vocabulary generation
-* Contrastive multimodal pretraining
-* BLIP-style query transformer
-* LoRA fine-tuning
-* Flash Attention integration
-* Larger vision-language backbones
+- Parameter-efficient fine-tuning (LoRA)
+- Improved answer vocabulary coverage
+- BLIP/Q-Former style architectures
+- Retrieval-Augmented Multimodal Systems
 
 ---
 
@@ -458,8 +501,6 @@ This project provided practical experience in:
 5. Attention Is All You Need
 6. Vision Transformer (ViT)
 7. BLIP
-8. ViLBERT
-9. LXMERT
 
 ---
 
