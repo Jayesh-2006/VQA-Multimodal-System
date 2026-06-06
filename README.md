@@ -8,7 +8,7 @@ This project implements a modern Transformer-based VQA architecture that combine
 
 ### Live Demo
 👉 Hugging Face Space: [https://huggingface.co/spaces/...](https://huggingface.co/spaces/Jayeshw2006/VQA)
-![Demo](assets/demo.jpg)
+![Demo](assets/thumbnail.png)
 
 The architecture integrates:
 
